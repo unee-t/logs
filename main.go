@@ -54,10 +54,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func loglookup(w http.ResponseWriter, r *http.Request) {
 	uuid := strings.TrimSpace(r.URL.Query().Get("uuid"))
+	reqid := strings.TrimSpace(r.URL.Query().Get("reqid"))
 
-	if uuid == "" {
-		http.Error(w, "Empty string", http.StatusBadRequest)
-		return
+	filterPattern := `{ $.level = "error" }`
+	if uuid != "" {
+		filterPattern = fmt.Sprintf(`{ $.fields.actionType.mefeAPIRequestId = "%s" }`, uuid)
+	}
+	if reqid != "" {
+		filterPattern = fmt.Sprintf(`{ $.fields.requestID = "%s" }`, reqid)
 	}
 
 	since := r.URL.Query().Get("since")
@@ -79,7 +83,7 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 	log.WithField("from", from).Infof("last %d hours", hours)
 
 	req := svc.FilterLogEventsRequest(&cloudwatchlogs.FilterLogEventsInput{
-		FilterPattern: aws.String(fmt.Sprintf(`{ $.fields.actionType.mefeAPIRequestId = "%s" }`, uuid)),
+		FilterPattern: aws.String(filterPattern),
 		LogGroupName:  aws.String("/aws/lambda/alambda_simple"),
 		StartTime:     &from,
 	})
@@ -117,11 +121,13 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		Logs  []template.HTML
 		CSS   template.CSS
 		UUID  string
+		ReqID string
 		Hours int
 	}{
 		logs,
 		template.CSS(css.String()),
 		uuid,
+		reqid,
 		hours,
 	})
 	if err != nil {

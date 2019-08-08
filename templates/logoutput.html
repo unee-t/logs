@@ -4,7 +4,13 @@
 {{ .CSS }}
 </style>
 
+{{ if .UUID }}
 <h1>mefeAPIRequestId {{ .UUID }}</h1>
+{{ else if .ReqID }}
+<h1>requestID {{ .ReqID }}</h1>
+{{ else }}
+<h1>Errors</h1>
+{{ end }}
 
 <p>{{ len .Logs }} results since {{ .Hours }} hours</p>
 
