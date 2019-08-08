@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"strconv"
-	"text/template"
+	"strings"
 	"time"
 
+	"github.com/alecthomas/chroma/formatters/html"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/apex/log"
 	jsonhandler "github.com/apex/log/handlers/json"
 	"github.com/apex/log/handlers/text"
@@ -48,7 +53,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func loglookup(w http.ResponseWriter, r *http.Request) {
-	uuid := r.URL.Query().Get("uuid")
+	uuid := strings.TrimSpace(r.URL.Query().Get("uuid"))
 
 	if uuid == "" {
 		http.Error(w, "Empty string", http.StatusBadRequest)
@@ -79,24 +84,43 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		StartTime:     &from,
 	})
 
-	var logs []string
+	var logs []template.HTML
+
+	lexer := lexers.Get("json")
+	style := styles.Get("monokai")
+	formatter := html.New(html.WithClasses(), html.WithLineNumbers())
+	css := &bytes.Buffer{}
+	err = formatter.WriteCSS(css, style)
+	if err != nil {
+		log.WithError(err).Error("writing css")
+	}
+
 	p := req.Paginate()
 	for p.Next() {
 		page := p.CurrentPage()
 		for _, event := range page.Events {
-			logs = append(logs, fmt.Sprintf("%s", pretty.Pretty([]byte(*event.Message))))
+			w := &bytes.Buffer{}
+			contents := pretty.Pretty([]byte(*event.Message))
+			iterator, err := lexer.Tokenise(nil, string(contents))
+			err = formatter.Format(w, style, iterator)
+			if err != nil {
+				log.WithError(err).Error("woops")
+			}
+			logs = append(logs, template.HTML(w.String()))
 		}
 	}
-	if err := p.Err(); err != nil {
+	if err = p.Err(); err != nil {
 		panic(err)
 	}
 
 	err = views.ExecuteTemplate(w, "logoutput.html", struct {
-		Logs  []string
+		Logs  []template.HTML
+		CSS   template.CSS
 		UUID  string
 		Hours int
 	}{
 		logs,
+		template.CSS(css.String()),
 		uuid,
 		hours,
 	})
