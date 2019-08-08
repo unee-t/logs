@@ -1,0 +1,35 @@
+{
+  "name": "logs",
+  "profile": "uneet-dev",
+  "stages": {
+    "staging": {
+      "domain": "logs.dev.unee-t.com",
+      "zone": "dev.unee-t.com"
+    }
+  },
+  "regions": [
+    "ap-southeast-1"
+  ],
+  "error_pages": {
+    "disable": true
+  },
+  "lambda": {
+    "policy": [
+      {
+        "Action": [
+          "autoscaling:Describe*",
+          "cloudwatch:Describe*",
+          "cloudwatch:Get*",
+          "cloudwatch:List*",
+          "logs:Get*",
+          "logs:Describe*",
+          "logs:Filter*",
+          "sns:Get*",
+          "sns:List*"
+        ],
+        "Effect": "Allow",
+        "Resource": "*"
+      }
+    ]
+  }
+}

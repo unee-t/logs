@@ -1,0 +1,13 @@
+{{template "header"}}
+
+<h1>mefeAPIRequestId {{ .UUID }}</h1>
+
+<p>{{ len .Logs }} results since {{ .Hours }} hours</p>
+
+{{ range .Logs }}
+<pre>
+{{ . }}
+</pre>
+{{ end }}
+
+{{template "footer"}}
