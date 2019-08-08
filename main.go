@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -20,8 +21,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
-	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 	"github.com/tidwall/pretty"
+	login "github.com/unee-t/internal-github-login"
 )
 
 var views = template.Must(template.ParseGlob("templates/*.html"))
@@ -34,10 +36,12 @@ func main() {
 		log.SetHandler(jsonhandler.Default)
 	}
 
+	adminHandlers := alice.New(login.RequireUneeT)
+	app := login.GithubOrgOnly()
+
 	addr := ":" + os.Getenv("PORT")
-	app := mux.NewRouter()
-	app.HandleFunc("/", index)
-	app.HandleFunc("/l", loglookup)
+	app.Handle("/", adminHandlers.ThenFunc(index))
+	app.Handle("/l", adminHandlers.ThenFunc(loglookup))
 	if err := http.ListenAndServe(addr, app); err != nil {
 		log.WithError(err).Fatal("error listening")
 	}
@@ -99,8 +103,8 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("writing css")
 	}
 
-	p := req.Paginate()
-	for p.Next() {
+	p := cloudwatchlogs.NewFilterLogEventsPaginator(req)
+	for p.Next(context.TODO()) {
 		page := p.CurrentPage()
 		for _, event := range page.Events {
 			w := &bytes.Buffer{}
