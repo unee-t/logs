@@ -12,7 +12,7 @@
 <h1>Errors</h1>
 {{ end }}
 
-<p>{{ len .Logs }} results since {{ .Hours }} hours</p>
+<p>{{ len .Logs }} results between {{ .Start }} &amp; {{ .End }}</p>
 
 {{ range .Logs }}
 {{ . }}
