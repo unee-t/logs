@@ -107,7 +107,7 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 
 	filterPattern := `{ $.level = "error" }`
 	if args.UUID != "" {
-		filterPattern = fmt.Sprintf(`{ $.fields.actionType.mefeAPIRequestId = "%s" }`, args.UUID)
+		filterPattern = fmt.Sprintf(`{ $.fields.evt.mefeAPIRequestId = "%s" }`, args.UUID)
 	}
 	if args.ReqID != "" {
 		filterPattern = fmt.Sprintf(`{ $.fields.requestID = "%s" }`, args.ReqID)

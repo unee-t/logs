@@ -31,5 +31,8 @@
         "Resource": "*"
       }
     ]
+  },
+  "proxy": {
+    "timeout": 25
   }
 }
