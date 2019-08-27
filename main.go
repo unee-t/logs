@@ -21,7 +21,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/aws/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/tidwall/pretty"
@@ -41,14 +43,16 @@ func main() {
 		// i.e. local development
 		log.SetHandler(text.Default)
 		app = mux.NewRouter()
+		app.HandleFunc("/", index)
+		app.HandleFunc("/l", makeCanonical)
+		app.HandleFunc("/q", loglookup)
 	} else {
-		app = login.GithubOrgOnly() // sets up github callbacks
 		log.SetHandler(jsonhandler.Default)
+		app = login.GithubOrgOnly() // sets up github callbacks
+		app.Handle("/", login.RequireUneeT(http.HandlerFunc(index)))
+		app.Handle("/l", login.RequireUneeT(http.HandlerFunc(makeCanonical)))
+		app.Handle("/q", login.RequireUneeT(http.HandlerFunc(loglookup)))
 	}
-
-	app.Handle("/", login.RequireUneeT(http.HandlerFunc(index)))
-	app.Handle("/l", login.RequireUneeT(http.HandlerFunc(makeCanonical)))
-	app.Handle("/q", login.RequireUneeT(http.HandlerFunc(loglookup)))
 
 	if err := http.ListenAndServe(addr, app); err != nil {
 		log.WithError(err).Fatal("error listening")
@@ -64,6 +68,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func makeCanonical(w http.ResponseWriter, r *http.Request) {
+	env := strings.TrimSpace(r.URL.Query().Get("env"))
 	uuid := strings.TrimSpace(r.URL.Query().Get("uuid"))
 	reqid := strings.TrimSpace(r.URL.Query().Get("reqid"))
 
@@ -80,6 +85,10 @@ func makeCanonical(w http.ResponseWriter, r *http.Request) {
 	v := url.Values{}
 	v.Add("start", fmt.Sprintf("%d", startEpoch))
 	v.Add("end", fmt.Sprintf("%d", endEpoch))
+	if env != "" {
+		// TODO further validation?
+		v.Add("env", env)
+	}
 	if uuid != "" {
 		v.Add("uuid", uuid)
 	} else if reqid != "" {
@@ -93,6 +102,7 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 	type Lookup struct {
 		UUID  string
 		ReqID string
+		Env   string
 		Start int64
 		End   int64
 	}
@@ -103,6 +113,8 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	log.WithField("args", args).Info("parsed input")
 
 	filterPattern := `{ $.level = "error" }`
 	if args.UUID != "" {
@@ -117,6 +129,18 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Fatal("setting up credentials")
 		return
 	}
+
+	switch args.Env {
+	case "demo":
+		cfg.Credentials = stscreds.NewAssumeRoleProvider(sts.New(cfg), "arn:aws:iam::915001051872:role/logs.dev.unee-t.com")
+		log.Info("assuming demo role")
+	case "prod":
+		cfg.Credentials = stscreds.NewAssumeRoleProvider(sts.New(cfg), "arn:aws:iam::192458993663:role/logs.dev.unee-t.com")
+		log.Info("assuming prod role")
+	default:
+		args.Env = "dev"
+	}
+
 	cfg.Region = endpoints.ApSoutheast1RegionID
 	svc := cloudwatchlogs.New(cfg)
 
@@ -159,23 +183,22 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	log.Info("here")
 	err = views.ExecuteTemplate(w, "logoutput.html", struct {
 		Logs  []template.HTML
 		CSS   template.CSS
-		UUID  string
-		ReqID string
+		Input Lookup
 		Start time.Time
 		End   time.Time
 	}{
 		logs,
 		template.CSS(css.String()),
-		args.UUID,
-		args.ReqID,
+		args,
 		time.Unix(args.Start, 0),
 		time.Unix(args.End, 0),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-
 }

@@ -4,12 +4,12 @@
 {{ .CSS }}
 </style>
 
-{{ if .UUID }}
-<h1>mefeAPIRequestId {{ .UUID }}</h1>
-{{ else if .ReqID }}
-<h1>requestID {{ .ReqID }}</h1>
+{{ if .Input.UUID }}
+<h1>{{ .Input.Env }} mefeAPIRequestId {{ .Input.UUID }}</h1>
+{{ else if .Input.ReqID }}
+<h1>{{ .Input.Env }} requestID {{ .Input.ReqID }}</h1>
 {{ else }}
-<h1>Errors</h1>
+<h1>{{ .Input.Env }} Errors</h1>
 {{ end }}
 
 <p>{{ len .Logs }} results between {{ .Start }} &amp; {{ .End }}</p>

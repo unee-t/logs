@@ -17,6 +17,7 @@
     "policy": [
       {
         "Action": [
+          "sts:AssumeRole",
           "autoscaling:Describe*",
           "cloudwatch:Describe*",
           "cloudwatch:Get*",

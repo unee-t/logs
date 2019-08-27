@@ -1,15 +1,18 @@
 {{template "header"}}
 
 <form action="/l">
- <p><label>Since in hours: <input type=number name="since" value=8 required></label></p>
+ <p><label>Since in hours: <input type=number name="since" value=1 required></label></p>
  <p><label>mefeAPIRequestId UUID: <input name="uuid" size=36></label></p>
  <p><label>Lambda request ID UUID: <input name="reqid" size=36></label></p>
+ <p>Environment: <label><input type="radio" name="env" value="dev" required checked> Dev/Staging</label>
+ <label><input type="radio" name="env" value="demo"> Demo</label>
+ <label><input type="radio" name="env" value="prod"> Production</label>
  <p><button>Search logs</button></p>
 </form>
 
 <h3>CloudWatch console</h3>
 
-<p>The authoratative way to search logs is via the AWS console since the above form is limited to only 25s of search time.</p>
+<p>The authoratative way to search logs is via the AWS console since the above form is <strong>limited to only 25s of API gateway time</strong>.</p>
 
 <ul>
 <li><a href="https://ap-southeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1#logStream:group=/aws/lambda/alambda_simple">alambda_simple</a></li>
