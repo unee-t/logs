@@ -17,6 +17,7 @@ import (
 	"github.com/alecthomas/chroma/styles"
 	"github.com/apex/log"
 	jsonhandler "github.com/apex/log/handlers/json"
+	"github.com/apex/log/handlers/text"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -36,19 +37,18 @@ func main() {
 
 	var app *mux.Router
 
-	// if os.Getenv("UP_STAGE") == "" {
-	// 	// i.e. local development
-	// 	log.SetHandler(text.Default)
-	// 	app = mux.NewRouter()
-	// } else {
-	app = login.GithubOrgOnly() // sets up github callbacks
-	app.Use(login.RequireUneeT)
-	log.SetHandler(jsonhandler.Default)
-	//	}
+	if os.Getenv("UP_STAGE") == "" {
+		// i.e. local development
+		log.SetHandler(text.Default)
+		app = mux.NewRouter()
+	} else {
+		app = login.GithubOrgOnly() // sets up github callbacks
+		log.SetHandler(jsonhandler.Default)
+	}
 
-	app.HandleFunc("/", index)
-	app.HandleFunc("/l", makeCanonical)
-	app.HandleFunc("/q", loglookup)
+	app.Handle("/", login.RequireUneeT(http.HandlerFunc(index)))
+	app.Handle("/l", login.RequireUneeT(http.HandlerFunc(makeCanonical)))
+	app.Handle("/q", login.RequireUneeT(http.HandlerFunc(loglookup)))
 
 	if err := http.ListenAndServe(addr, app); err != nil {
 		log.WithError(err).Fatal("error listening")
