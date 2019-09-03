@@ -43,21 +43,19 @@ func main() {
 		// i.e. local development
 		log.SetHandler(text.Default)
 		app = mux.NewRouter()
-		app.HandleFunc("/", index)
-		app.HandleFunc("/l", makeCanonical)
-		app.HandleFunc("/q", loglookup)
 	} else {
 		log.SetHandler(jsonhandler.Default)
 		app = login.GithubOrgOnly() // sets up github callbacks
-		app.Handle("/", login.RequireUneeT(http.HandlerFunc(index)))
-		app.Handle("/l", login.RequireUneeT(http.HandlerFunc(makeCanonical)))
-		app.Handle("/q", login.RequireUneeT(http.HandlerFunc(loglookup)))
+		app.Use(login.RequireUneeT)
 	}
+
+	app.HandleFunc("/", index)
+	app.HandleFunc("/l", makeCanonical)
+	app.HandleFunc("/q", loglookup)
 
 	if err := http.ListenAndServe(addr, app); err != nil {
 		log.WithError(err).Fatal("error listening")
 	}
-
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +148,7 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 	req := svc.FilterLogEventsRequest(&cloudwatchlogs.FilterLogEventsInput{
 		EndTime:       &endTime,
 		FilterPattern: aws.String(filterPattern),
-		LogGroupName:  aws.String("/aws/lambda/alambda_simple"),
+		LogGroupName:  aws.String("/aws/lambda/ut_lambda2sqs_process"),
 		StartTime:     &startTime,
 	})
 
@@ -174,7 +172,7 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 			iterator, err := lexer.Tokenise(nil, string(contents))
 			err = formatter.Format(w, style, iterator)
 			if err != nil {
-				log.WithError(err).Error("woops")
+				log.WithError(err).Error("formatter failed")
 			}
 			logs = append(logs, template.HTML(w.String()))
 		}
@@ -183,7 +181,6 @@ func loglookup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	log.Info("here")
 	err = views.ExecuteTemplate(w, "logoutput.html", struct {
 		Logs  []template.HTML
 		CSS   template.CSS

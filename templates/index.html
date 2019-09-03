@@ -2,8 +2,8 @@
 
 <form action="/l">
  <p><label>Since in hours: <input type=number name="since" value=1 required></label></p>
- <p><label>mefeAPIRequestId UUID: <input name="uuid" size=36></label></p>
- <p><label>Lambda request ID UUID: <input name="reqid" size=36></label></p>
+ <p><label>mefeAPIRequestId UUID: <input name="uuid" size=36 minlength=36 maxlength=36></label></p>
+ <p><label>Lambda request ID UUID: <input name="reqid" size=36 minlength=36 maxlength=36></label></p>
  <p>Environment: <label><input type="radio" name="env" value="dev" required checked> Dev/Staging</label>
  <label><input type="radio" name="env" value="demo"> Demo</label>
  <label><input type="radio" name="env" value="prod"> Production</label>
@@ -12,11 +12,6 @@
 
 <h3>CloudWatch console</h3>
 
-<p>The authoratative way to search logs is via the AWS console since the above form is <strong>limited to only 25s of API gateway time</strong>.</p>
-
-<ul>
-<li><a href="https://ap-southeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1#logStream:group=/aws/lambda/alambda_simple">alambda_simple</a></li>
-<li><a href="https://ap-southeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1#logStream:group=/aws/lambda/alambda_simple_retry">alambda_simple_retry</a></li>
-</ul>
+<p>The authoratative way to search logs is via the <a href="https://ap-southeast-1.console.aws.amazon.com/lambda/home?region=ap-southeast-1#/applications/lambda2sqs?tab=monitoring">AWS console</a> since the above form is <strong>limited to only 25s of API gateway time</strong>.</p>
 
 {{template "footer"}}
