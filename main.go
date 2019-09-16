@@ -43,15 +43,14 @@ func main() {
 		// i.e. local development
 		log.SetHandler(text.Default)
 		app = mux.NewRouter()
-	} else {
-		log.SetHandler(jsonhandler.Default)
-		app = login.GithubOrgOnly() // sets up github callbacks
-		app.Use(login.RequireUneeT)
-	}
-
-	app.HandleFunc("/", index)
-	app.HandleFunc("/l", makeCanonical)
-	app.HandleFunc("/q", loglookup)
+		} else {
+			app = login.GithubOrgOnly() // sets up github callbacks
+			log.SetHandler(jsonhandler.Default)
+		}
+	
+		app.Handle("/", login.RequireUneeT(http.HandlerFunc(index)))
+		app.Handle("/l", login.RequireUneeT(http.HandlerFunc(makeCanonical)))
+		app.Handle("/q", login.RequireUneeT(http.HandlerFunc(loglookup)))
 
 	if err := http.ListenAndServe(addr, app); err != nil {
 		log.WithError(err).Fatal("error listening")
